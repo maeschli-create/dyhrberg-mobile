@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0E3A82">
+<title>Dashboard Mobile</title>
+<link rel="icon" href="logos/dyhrberg-de.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="Dyhrberg">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="mobile.css?v=20261007104417">
+</head>
+<body>
+<div id="boot" class="boot">Dashboard Mobile wird geladen …</div>
+<div id="fatal" class="fatal hid"></div>
+
+<!-- Daten laden (nur Web-Modus) -->
+<section id="setup" class="login hid">
+ <div class="login-box">
+  <img src="logos/dyhrberg-de.png" alt="Dyhrberg" class="login-logo">
+  <h1>Dashboard Mobile</h1>
+  <p data-i="Einmalig und dann bei jedem neuen Stand: in OneDrive die Datei «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen. Die Kundendaten bleiben auf diesem Gerät, sie liegen nicht im Internet.">Einmalig und dann bei jedem neuen Stand: in OneDrive die Datei «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen. Die Kundendaten bleiben auf diesem Gerät, sie liegen nicht im Internet.</p>
+  <button type="button" id="setupBtn" class="pri big" data-i="Datei wählen">Datei wählen</button>
+  <div id="setupMsg" class="err"></div>
+ </div>
+</section>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+
+<!-- Anmeldung -->
+<section id="login" class="login hid">
+ <div class="login-box">
+  <img src="logos/dyhrberg-de.png" alt="Dyhrberg" class="login-logo">
+  <h1>Dashboard Mobile</h1>
+  <label for="lgName" data-i="Name">Name</label>
+  <select id="lgName"></select>
+  <label for="lgPin">PIN</label>
+  <input id="lgPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">
+  <button type="button" id="lgGo" class="pri big" data-i="Anmelden">Anmelden</button>
+  <div id="lgMsg" class="err"></div>
+ </div>
+</section>
+
+<!-- Hauptansicht -->
+<div id="app" class="app hid">
+ <header class="top">
+  <div class="top-l">
+   <div class="top-t" id="topT">Dashboard Mobile</div>
+   <div class="top-s" id="topS"></div>
+  </div>
+  <div class="top-r">
+   <span id="langBox" class="langbox hid"><button type="button" data-lang="de">DE</button><button type="button" data-lang="fr">FR</button></span>
+   <button type="button" id="btnMenu" class="icon" aria-label="Menü">⋮</button>
+  </div>
+ </header>
+ <div id="menu" class="menu hid">
+  <button type="button" id="mData" class="hid" data-i="Daten aktualisieren (Datei wählen)">Daten aktualisieren (Datei wählen)</button>
+  <button type="button" id="mReload" data-i="Neu laden">Neu laden</button>
+  <button type="button" id="mLogout" data-i="Abmelden">Abmelden</button>
+ </div>
+ <div id="adBar" class="adbar hid"><label for="adSel" data-i="Gebiet">Gebiet</label><select id="adSel"></select></div>
+
+ <main id="main">
+  <!-- Kunden -->
+  <section id="v-kunden" class="view">
+   <div class="locbar" id="locBar"></div>
+   <div class="search"><input id="q" type="search" placeholder="Name, Ort, PLZ oder Nr." autocomplete="off"></div>
+   <div class="chips" id="chipsK"></div>
+   <div class="sortrow"><span data-i="Sortierung">Sortierung</span>
+    <button type="button" data-sort="dist" class="seg" data-i="Nähe">Nähe</button><button type="button" data-sort="name" class="seg" data-i="Name">Name</button><button type="button" data-sort="rev" class="seg" data-i="Umsatz">Umsatz</button>
+    <span id="cntK" class="cnt"></span></div>
+   <div id="listK" class="list"></div>
+  </section>
+  <!-- Karte -->
+  <section id="v-karte" class="view hid">
+   <div class="chips" id="chipsM"></div>
+   <div id="mapWrap"><div id="map"></div>
+    <button type="button" id="mapMe" class="mapme" aria-label="Standort">◎</button>
+    <div id="mapNote" class="mapnote hid"></div></div>
+  </section>
+  <!-- Schlafende -->
+  <section id="v-schlaf" class="view hid">
+   <div class="locbar" id="locBar2"></div>
+   <div class="note" id="schlafNote"></div>
+   <div class="chips" id="chipsR"></div>
+   <div class="sortrow"><span id="cntS" class="cnt"></span></div>
+   <div id="listS" class="list"></div>
+  </section>
+  <!-- Neuer Kunde -->
+  <section id="v-neu" class="view hid">
+   <div class="note" id="nkNote"></div>
+   <div id="nkDup" class="note warn hid"></div>
+   <form id="nkForm" autocomplete="off" onsubmit="return false" class="nk">
+    <label for="nkName" data-i="Name des Betriebes *">Name des Betriebes *</label><input id="nkName">
+    <label for="nkRf" data-i="Rechtsform">Rechtsform</label>
+    <select id="nkRf"><option value="" data-i="– bitte wählen –">– bitte wählen –</option><option>AG</option><option>SA</option><option>SARL</option><option>GmbH</option><option>Holding</option><option>Einzelfirma</option></select>
+    <label for="nkAdr" data-i="Adresse (Strasse, Nr.) *">Adresse (Strasse, Nr.) *</label><input id="nkAdr">
+    <div class="two"><div><label for="nkPlz" data-i="PLZ *">PLZ *</label><input id="nkPlz" inputmode="numeric" maxlength="4"></div>
+     <div><label for="nkOrt" data-i="Ort *">Ort *</label><input id="nkOrt" list="nkOrtList"><datalist id="nkOrtList"></datalist></div></div>
+    <h3 data-i="Telefonnummer">Telefonnummer</h3>
+    <label for="nkTelM" data-i="Mobile">Mobile</label><input id="nkTelM" inputmode="tel">
+    <label for="nkTelD" data-i="Direkt">Direkt</label><input id="nkTelD" inputmode="tel">
+    <label for="nkTelH" data-i="Hauptnummer">Hauptnummer</label><input id="nkTelH" inputmode="tel">
+    <h3>E-Mail</h3>
+    <label for="nkMailA" data-i="E-Mail-Adresse für Aktionen">E-Mail-Adresse für Aktionen</label><input id="nkMailA" type="email">
+    <label for="nkMailR" data-i="E-Mail-Adresse für Rechnung">E-Mail-Adresse für Rechnung</label><input id="nkMailR" type="email">
+    <h3 data-i="Zeiten">Zeiten</h3>
+    <label for="nkOeff" data-i="Öffnungszeiten">Öffnungszeiten</label><textarea id="nkOeff" rows="3"></textarea>
+    <label for="nkLief" data-i="Lieferzeiten">Lieferzeiten</label><textarea id="nkLief" rows="3"></textarea>
+    <h3 data-i="Ansprechpersonen">Ansprechpersonen</h3>
+    <div id="nkRoles"></div>
+    <div class="btnrow">
+     <button type="button" id="nkMail" class="pri big" data-i="E-Mail erstellen">E-Mail erstellen</button>
+     <button type="button" id="nkCopy" data-i="Text kopieren">Text kopieren</button>
+     <button type="button" id="nkClear" data-i="Formular leeren">Formular leeren</button>
+    </div>
+    <div class="msg" id="nkMsg"></div>
+   </form>
+  </section>
+ </main>
+
+ <nav class="tabbar" id="tabbar">
+  <button type="button" data-v="kunden" class="on"><span class="ic">☰</span><span data-i="Kunden">Kunden</span></button>
+  <button type="button" data-v="karte"><span class="ic">⌖</span><span data-i="Karte">Karte</span></button>
+  <button type="button" data-v="schlaf"><span class="ic">☾</span><span data-i="Schlafend">Schlafend</span></button>
+  <button type="button" data-v="neu"><span class="ic">＋</span><span data-i="Neuer Kunde">Neuer Kunde</span></button>
+ </nav>
+</div>
+
+<!-- Kundendetail -->
+<div id="detail" class="detail hid"></div>
+
+<script src="geo-plz.js"></script>
+
+
+<script src="plz-ort.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="mobile.js?v=20261007104417"></script>
+<script>if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }</script>
+</body>
+</html>

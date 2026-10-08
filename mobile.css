@@ -55,7 +55,9 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;p
 .locbar button{min-height:38px;padding:6px 12px;font-size:14px}
 .locbar input{min-height:38px;padding:6px 10px;width:120px;font-size:15px}
 .locok{color:var(--ok)}
-.search{margin-bottom:8px}
+.search{margin-bottom:8px;display:flex;gap:8px}
+.search input{flex:1;min-width:0}
+.rst{flex:none;padding:0 12px;white-space:nowrap}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
 .chips button{flex:none;border-radius:20px;padding:6px 13px;min-height:36px;font-size:14px;white-space:nowrap}
 .chips button.on{background:var(--bl);color:#fff;border-color:var(--bl)}

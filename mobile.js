@@ -33,7 +33,7 @@ var FR={
 'Achtung, in dieser PLZ gibt es bereits ähnliche Kunden':'Attention, il existe déjà des clients similaires dans ce NPA','Mehrere Orte zu dieser PLZ: bitte den richtigen wählen':'Plusieurs lieux pour ce NPA : choisissez le bon',
 'Zu dieser PLZ ist kein Ort bekannt, bitte Ort von Hand eingeben.':'Aucun lieu connu pour ce NPA, saisissez-le à la main.',
 'z. B. Mo–Fr 08–17, Sa 08–12':'p. ex. lu–ve 08–17, sa 08–12','z. B. Di und Fr bis 10 Uhr':'p. ex. ma et ve jusqu’à 10 h',
-'Dashboard Mobile wird geladen …':'Chargement …','Zurücksetzen':'Réinitialiser','Daten laden':'Charger les données','Daten aktualisieren (Datei wählen)':'Mettre à jour les données (choisir le fichier)','Datei wählen':'Choisir le fichier','Diese Datei ist keine gültige Datei für Dashboard Mobile. Bitte «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen.':'Ce fichier n’est pas valable pour Dashboard Mobile. Choisissez «Daten Dashboard Mobile.json» dans votre dossier.','Daten konnten im Gerät nicht gespeichert werden (privater Modus?).':'Les données n’ont pas pu être enregistrées sur l’appareil (mode privé ?).','Datei konnte nicht gelesen werden.':'Le fichier n’a pas pu être lu.','Einmalig und dann bei jedem neuen Stand: in OneDrive die Datei «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen. Die Kundendaten bleiben auf diesem Gerät, sie liegen nicht im Internet.':'Une fois, puis à chaque nouvel état : choisissez dans OneDrive le fichier «Daten Dashboard Mobile.json» de votre dossier. Les données clients restent sur cet appareil, elles ne sont pas sur Internet.','Fehler':'Erreur'
+'Dashboard Mobile wird geladen …':'Chargement …','Zurücksetzen':'Réinitialiser','Interessent':'Prospect','Kontakt':'Contact','Telefon':'Téléphone','Weitere Nr. (Fax)':'Autre n° (fax)','E-Mail':'E-mail','Ansprechperson':'Personne de contact','Anrufen':'Appeler','E-Mail schreiben':'Écrire un e-mail','gesperrt':'bloqué','Daten laden':'Charger les données','Daten aktualisieren (Datei wählen)':'Mettre à jour les données (choisir le fichier)','Datei wählen':'Choisir le fichier','Diese Datei ist keine gültige Datei für Dashboard Mobile. Bitte «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen.':'Ce fichier n’est pas valable pour Dashboard Mobile. Choisissez «Daten Dashboard Mobile.json» dans votre dossier.','Daten konnten im Gerät nicht gespeichert werden (privater Modus?).':'Les données n’ont pas pu être enregistrées sur l’appareil (mode privé ?).','Datei konnte nicht gelesen werden.':'Le fichier n’a pas pu être lu.','Einmalig und dann bei jedem neuen Stand: in OneDrive die Datei «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen. Die Kundendaten bleiben auf diesem Gerät, sie liegen nicht im Internet.':'Une fois, puis à chaque nouvel état : choisissez dans OneDrive le fichier «Daten Dashboard Mobile.json» de votre dossier. Les données clients restent sur cet appareil, elles ne sont pas sur Internet.','Fehler':'Erreur'
 };
 var lang='de';
 function t(s){ return lang==='fr'&&FR[s]?FR[s]:s; }
@@ -70,7 +70,7 @@ function prepare(){
   var adLast={}; (D.gebiete||[]).forEach(function(g){adLast[g.name]=g.last;});
   C=(D.kunden||[]).map(function(k){
     var cut=adLast[k.ad]||0;
-    var c={id:k.id,ad:k.ad,n:k.n||('Kunde '+k.id),s:k.s||'',plz:k.plz||'',o:k.o||'',m25:k.m25||[],m26:k.m26||[],y24:k.y24||0,cut:cut};
+    var c={id:k.id,ad:k.ad,n:k.n||('Kunde '+k.id),s:k.s||'',plz:k.plz||'',o:k.o||'',m25:k.m25||[],m26:k.m26||[],y24:k.y24||0,sp:k.sp,ia:k.ia,tel:k.tel||'',mail:k.mail||'',t2:k.t2||'',kp:k.kp||'',cut:cut};
     c.ytd26=sum(c.m26,0,cut); c.ytd25=sum(c.m25,0,cut); c.full25=Math.max(k.y25||0,sum(c.m25));
     var older=(k.y21||0)+(k.y22||0)+(k.y23||0)+(k.y24||0)+c.full25;
     c.d=c.ytd26-c.ytd25;
@@ -242,15 +242,26 @@ function chart(c){
   }
   return s+'</svg><div class="legend"><span><i style="background:#b8c2d6"></i>2025</span><span><i style="background:#0E3A82"></i>2026</span></div>';
 }
+function contactCard(c){
+  if(!(c.tel||c.mail||c.t2||c.kp)) return '';
+  var telOk=(c.tel||'').replace(/\D/g,'').length>=7, h='<div class="dcard"><h4>'+esc(t('Kontakt'))+'</h4>';
+  if(c.kp) h+='<div class="kv"><span>'+esc(t('Ansprechperson'))+'</span><b>'+esc(c.kp)+'</b></div>';
+  if(c.tel) h+='<div class="kv"><span>'+esc(t('Telefon'))+'</span><b>'+esc(c.tel)+'</b></div>';
+  if(c.t2) h+='<div class="kv"><span>'+esc(t('Weitere Nr. (Fax)'))+'</span><b>'+esc(c.t2)+'</b></div>';
+  if(c.mail) h+='<div class="kv"><span>'+esc(t('E-Mail'))+'</span><b style="word-break:break-all">'+esc(c.mail)+'</b></div>';
+  if(telOk||c.mail){ h+='<div class="navrow">'+(telOk?'<a href="tel:'+esc((c.tel||'').replace(/[^\d+]/g,''))+'">'+esc(t('Anrufen'))+'</a>':'')+(c.mail?'<a class="'+(telOk?'sec':'')+'" href="mailto:'+esc(c.mail)+'">'+esc(t('E-Mail schreiben'))+'</a>':'')+'</div>'; }
+  return h+'</div>';
+}
 function openDetail(id){
   var c=C.filter(function(x){return x.id===id;})[0]; if(!c) return;
   var cut=c.cut, per=cut>1?MON[lang][0]+'–'+MON[lang][cut-1]:(cut?MON[lang][0]:'');
   var diffPct=c.ytd25>0?((c.ytd26/c.ytd25-1)*100):null;
   var cls=c.d>0?'up':c.d<0?'dn':'';
-  var st='<span class="badge" style="background:'+STATUS[c.st].c+'">'+esc(t(STATUS[c.st].l))+'</span>'+(c.sleep?'<span class="badge sl">'+esc(t('Schlafend'))+'</span>':'');
+  var st='<span class="badge" style="background:'+STATUS[c.st].c+'">'+esc(t(STATUS[c.st].l))+'</span>'+(c.sleep?'<span class="badge sl">'+esc(t('Schlafend'))+'</span>':'')+(c.ia?'<span class="badge" style="background:#667085">'+esc(t('Interessent'))+'</span>':'')+(c.sp?'<span class="badge" style="background:#C0392B">'+esc(t('gesperrt'))+'</span>':'');
   var distLine=c.dist!==null?'<div class="kv"><span>'+esc(t('Entfernung'))+'</span><b>'+fmtKm(c.dist,c.q<2)+(c.q<2?' <span style="font-weight:400;color:#667085">('+esc(t('ungefähr (Strasse/PLZ)'))+')</span>':'')+'</b></div>':'';
   var h='<div class="dhead"><button type="button" id="dBack">‹ '+t('Zurück')+'</button><div class="t">'+esc(c.n)+'</div></div><div class="dbody">'+
    '<div class="dcard"><div class="addr">'+esc(c.s||'–')+'<br>'+esc(c.plz+' '+c.o)+'</div>'+distLine+'<div class="navrow">'+navLinks(c)+'</div></div>'+
+   contactCard(c)+
    '<div class="dcard"><div class="kv"><span>'+esc(t('Status'))+'</span><span>'+st+'</span></div>'+
    '<div class="kv"><span>'+esc(t('Kunden-Nr.'))+'</span><b>'+esc(c.id)+'</b></div>'+
    (USER&&USER.role==='leitung'?'<div class="kv"><span>'+esc(t('Gebiet'))+'</span><b>'+esc(c.ad)+'</b></div>':'')+

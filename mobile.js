@@ -33,7 +33,7 @@ var FR={
 'Achtung, in dieser PLZ gibt es bereits ähnliche Kunden':'Attention, il existe déjà des clients similaires dans ce NPA','Mehrere Orte zu dieser PLZ: bitte den richtigen wählen':'Plusieurs lieux pour ce NPA : choisissez le bon',
 'Zu dieser PLZ ist kein Ort bekannt, bitte Ort von Hand eingeben.':'Aucun lieu connu pour ce NPA, saisissez-le à la main.',
 'z. B. Mo–Fr 08–17, Sa 08–12':'p. ex. lu–ve 08–17, sa 08–12','z. B. Di und Fr bis 10 Uhr':'p. ex. ma et ve jusqu’à 10 h',
-'Dashboard Mobile wird geladen …':'Chargement …','Zurücksetzen':'Réinitialiser','Interessent':'Prospect','Kontakt':'Contact','Telefon':'Téléphone','Weitere Nr. (Fax)':'Autre n° (fax)','E-Mail':'E-mail','Ansprechperson':'Personne de contact','Anrufen':'Appeler','E-Mail schreiben':'Écrire un e-mail','gesperrt':'bloqué','Daten laden':'Charger les données','Daten aktualisieren (Datei wählen)':'Mettre à jour les données (choisir le fichier)','Datei wählen':'Choisir le fichier','Diese Datei ist keine gültige Datei für Dashboard Mobile. Bitte «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen.':'Ce fichier n’est pas valable pour Dashboard Mobile. Choisissez «Daten Dashboard Mobile.json» dans votre dossier.','Daten konnten im Gerät nicht gespeichert werden (privater Modus?).':'Les données n’ont pas pu être enregistrées sur l’appareil (mode privé ?).','Datei konnte nicht gelesen werden.':'Le fichier n’a pas pu être lu.','Einmalig und dann bei jedem neuen Stand: in OneDrive die Datei «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen. Die Kundendaten bleiben auf diesem Gerät, sie liegen nicht im Internet.':'Une fois, puis à chaque nouvel état : choisissez dans OneDrive le fichier «Daten Dashboard Mobile.json» de votre dossier. Les données clients restent sur cet appareil, elles ne sont pas sur Internet.','Fehler':'Erreur'
+'Dashboard Mobile wird geladen …':'Chargement …','Zurücksetzen':'Réinitialiser','Listen':'Listes','Nicht-Kunden':'Non-clients','Nicht-Kunde (Liste)':'Non-client (liste)','Betriebe':'établissements','Keine Betriebe gefunden.':'Aucun établissement trouvé.','Gault Millau':'Gault Millau','Goldener Fisch':'Poisson d’or','auf beiden Listen':'sur les deux listes','ab 15 Punkte':'dès 15 points','ohne Unsichere':'sans incertains','unsicher':'incertain','Punkte':'points','Auszeichnung':'Distinction','Zusatz':'Complément','Küchenchef':'Chef de cuisine','Unsicher, ob schon Kunde':'Incertain, déjà client ?','Bitte vor dem Besuch prüfen.':'À vérifier avant la visite.','Name, Ort, PLZ':'Nom, lieu, NPA','Betriebe auf den Listen Gault Millau und Goldener Fisch, die keine Dyhrberg-Kunden sind (Gebiet nach Kanton). «unsicher»: Abgleich mit den Kunden nicht eindeutig, vor dem Besuch kurz prüfen.':'Établissements des listes Gault Millau et Poisson d’or qui ne sont pas clients de Dyhrberg (secteur selon le canton). «incertain» : correspondance avec les clients pas claire, à vérifier avant la visite.','Interessent':'Prospect','Kontakt':'Contact','Telefon':'Téléphone','Weitere Nr. (Fax)':'Autre n° (fax)','E-Mail':'E-mail','Ansprechperson':'Personne de contact','Anrufen':'Appeler','E-Mail schreiben':'Écrire un e-mail','gesperrt':'bloqué','Daten laden':'Charger les données','Daten aktualisieren (Datei wählen)':'Mettre à jour les données (choisir le fichier)','Datei wählen':'Choisir le fichier','Diese Datei ist keine gültige Datei für Dashboard Mobile. Bitte «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen.':'Ce fichier n’est pas valable pour Dashboard Mobile. Choisissez «Daten Dashboard Mobile.json» dans votre dossier.','Daten konnten im Gerät nicht gespeichert werden (privater Modus?).':'Les données n’ont pas pu être enregistrées sur l’appareil (mode privé ?).','Datei konnte nicht gelesen werden.':'Le fichier n’a pas pu être lu.','Einmalig und dann bei jedem neuen Stand: in OneDrive die Datei «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen. Die Kundendaten bleiben auf diesem Gerät, sie liegen nicht im Internet.':'Une fois, puis à chaque nouvel état : choisissez dans OneDrive le fichier «Daten Dashboard Mobile.json» de votre dossier. Les données clients restent sur cet appareil, elles ne sont pas sur Internet.','Fehler':'Erreur'
 };
 var lang='de';
 function t(s){ return lang==='fr'&&FR[s]?FR[s]:s; }
@@ -60,7 +60,7 @@ window.addEventListener('error',function(e){ if($('boot')&&!$('boot').classList.
 
 // ---------- Zustand ----------
 var USER=null, C=[], D={}, pos=null, locMsg='', map=null, mapLayer=null, meMarker=null, mapDirty=true, mapFitted=false, tileErrs=0;
-var F={q:'',chip:'',sort:'dist',ad:'',radius:25,shown:60,shownS:60};
+var F={q:'',chip:'',sort:'dist',ad:'',radius:25,shown:60,shownS:60,liChip:'',liRad:25,liQ:'',liShown:60,mapLi:false}, LI=[];
 var view='kunden';
 var GEO=window.GEO_PLZ||{}, GK={}, WEB=false;
 
@@ -95,9 +95,13 @@ function prepare(){
   });
   var seen={};
   C.forEach(function(c){ if(c.lat===undefined||c.q>0) return; var i=seen[c.plz]=(seen[c.plz]||0)+1; if(i>1){var a=i*2.4,r=0.0022*Math.sqrt(i);c.lat+=r*Math.sin(a);c.lon+=r*1.4*Math.cos(a);} });
+  LI=(window.NICHTKUNDEN||[]).slice();
   recalcDist();
 }
-function recalcDist(){ C.forEach(function(c){ c.dist=(pos&&c.lat!==undefined)?km(pos.lat,pos.lon,c.lat,c.lon):null; }); }
+function recalcDist(){
+  C.forEach(function(c){ c.dist=(pos&&c.lat!==undefined)?km(pos.lat,pos.lon,c.lat,c.lon):null; });
+  LI.forEach(function(n){ n.dist=(pos&&n.lat)?km(pos.lat,pos.lon,n.lat,n.lon):null; });
+}
 
 // ---------- Filter ----------
 function base(){ return F.ad?C.filter(function(c){return c.ad===F.ad;}):C; }
@@ -138,7 +142,7 @@ function renderLoc(){
   if(pos) h='<span class="grow locok">● '+esc(pos.label)+'</span><button type="button" data-act="gps">↻</button><input data-role="plz" placeholder="'+esc(t('PLZ oder Ort'))+'"><button type="button" data-act="plz">'+t('Los')+'</button>';
   else h='<button type="button" class="pri" data-act="gps">'+t('Standort bestimmen')+'</button><input data-role="plz" placeholder="'+esc(t('PLZ oder Ort'))+'"><button type="button" data-act="plz">'+t('Los')+'</button>'+(locMsg?'<div class="grow" style="flex-basis:100%;font-size:13px;color:#667085">'+esc(locMsg)+'</div>':'');
   if(pos&&locMsg) h+='<div style="flex-basis:100%;font-size:13px;color:#C0392B">'+esc(locMsg)+'</div>';
-  ['locBar','locBar2'].forEach(function(id){ var el=$(id); if(el){ var keep=el.querySelector('input')?el.querySelector('input').value:''; el.innerHTML=h; if(keep&&el.querySelector('input')) el.querySelector('input').value=keep; } });
+  ['locBar','locBar2','locBar3'].forEach(function(id){ var el=$(id); if(el){ var keep=el.querySelector('input')?el.querySelector('input').value:''; el.innerHTML=h; if(keep&&el.querySelector('input')) el.querySelector('input').value=keep; } });
 }
 document.addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('[data-act]'); if(!b) return;
@@ -156,7 +160,10 @@ document.addEventListener('keydown',function(e){ if((e.key==='Enter'||e.keyCode=
 function chipDefs(){ return [['','Alle'],['rev','Mit Umsatz 2026'],['sleep','Schlafend'],['g','Wachstum'],['r','Rückgang'],['n','Neukunde'],['v','verloren'],['o','ohne Umsatz']]; }
 function renderChips(){
   var h=chipDefs().map(function(d){ return '<button type="button" data-chip="'+d[0]+'" class="'+(F.chip===d[0]?'on':'')+'">'+esc(t(d[1]))+'</button>'; }).join('');
-  $('chipsK').innerHTML=h; $('chipsM').innerHTML=h;
+  $('chipsK').innerHTML=h; $('chipsM').innerHTML=h+'<button type="button" data-limap class="nkt '+(F.mapLi?'on':'')+'">★ '+esc(t('Nicht-Kunden'))+'</button>';
+  var lc=[['','Alle'],['gm','Gault Millau'],['gf','Goldener Fisch'],['both','auf beiden Listen'],['p15','ab 15 Punkte'],['sure','ohne Unsichere']];
+  $('chipsLi').innerHTML=lc.map(function(d){ return '<button type="button" data-lichip="'+d[0]+'" class="'+(F.liChip===d[0]?'on':'')+'">'+esc(t(d[1]))+'</button>'; }).join('');
+  $('chipsLiR').innerHTML=[10,25,50,100,0].map(function(v){ return '<button type="button" data-lirad="'+v+'" class="'+(F.liRad===v?'on':'')+'">'+(v?v+' km':esc(t('Alle')))+'</button>'; }).join('');
   var r=[10,25,50,100,0].map(function(v){ return '<button type="button" data-rad="'+v+'" class="'+(F.radius===v?'on':'')+'">'+(v?v+' km':esc(t('Alle')))+'</button>'; }).join('');
   $('chipsR').innerHTML=r;
 }
@@ -190,6 +197,50 @@ function renderS(){
   document.querySelectorAll('[data-rad]').forEach(function(b){ b.classList.toggle('on',+b.getAttribute('data-rad')===F.radius); });
 }
 
+// ---------- Nicht-Kunden aus Listen (Gault Millau, Goldener Fisch) ----------
+function liFiltered(forMap){
+  var q=F.liQ.trim().toLowerCase(), ch=F.liChip, rad=F.liRad;
+  var a=LI.filter(function(n){
+    if(F.ad&&n.g!==F.ad) return false;
+    if(ch==='gm'&&!n.gm) return false; if(ch==='gf'&&!n.gf) return false; if(ch==='both'&&!(n.gm&&n.gf)) return false; if(ch==='p15'&&n.gm<15) return false; if(ch==='sure'&&n.u) return false;
+    if(forMap) return true;
+    if(q&&((n.n+' '+n.z+' '+n.o+' '+n.plz+' '+n.kc).toLowerCase().indexOf(q)<0)) return false;
+    if(pos&&rad&&(n.dist===null||n.dist>rad)) return false;
+    return true;
+  });
+  a.sort(function(x,y){ if(pos){ var dx=x.dist===null?1e9:x.dist, dy=y.dist===null?1e9:y.dist; return dx-dy; } return (y.gm-x.gm)||x.n.localeCompare(y.n); });
+  return a;
+}
+function liCard(n){
+  var d=n.dist===null?'':'<span class="dist">'+fmtKm(n.dist,n.q<2)+'</span>', aw=[];
+  if(n.gm) aw.push('Gault Millau '+n.gm); if(n.gf) aw.push(t('Goldener Fisch'));
+  return '<div class="card" data-li="'+esc(n.id)+'"><span class="dot dotli"></span><div class="cb"><div class="cn">'+esc(n.n)+(n.z?' · '+esc(n.z):'')+'</div><div class="cs">'+esc(n.s?n.s+', ':'')+esc(n.plz+' '+n.o)+'</div><div class="cs">'+esc(aw.join(' · '))+(n.u?' · <span style="color:#8A4B00">'+esc(t('unsicher'))+'</span>':'')+'</div></div><div class="cr">'+d+'<b>'+(n.gm?'GM '+n.gm:(n.gf?'GF':''))+'</b></div></div>';
+}
+function renderLi(){
+  $('liNote').textContent=t('Betriebe auf den Listen Gault Millau und Goldener Fisch, die keine Dyhrberg-Kunden sind (Gebiet nach Kanton). «unsicher»: Abgleich mit den Kunden nicht eindeutig, vor dem Besuch kurz prüfen.')+(pos?'':' '+t('Standort bestimmen oder PLZ eingeben, dann erscheint die Entfernung.'));
+  var a=liFiltered(false), n=a.length, out=a.slice(0,F.liShown);
+  $('cntLi').textContent=n+' '+t('Betriebe');
+  $('listLi').innerHTML=out.length?out.map(liCard).join('')+(n>out.length?'<button type="button" class="more" id="moreLi">'+t('Mehr anzeigen')+' ('+(n-out.length)+')</button>':''):'<div class="empty">'+t('Keine Betriebe gefunden.')+'</div>';
+  var m=$('moreLi'); if(m) m.onclick=function(){ F.liShown+=60; renderLi(); };
+  document.querySelectorAll('[data-lirad]').forEach(function(b){ b.classList.toggle('on',+b.getAttribute('data-lirad')===F.liRad); });
+}
+function openLi(id){
+  var n=LI.filter(function(x){return x.id===id;})[0]; if(!n) return;
+  var telOk=(n.tel||'').replace(/\D/g,'').length>=7, aw=[];
+  if(n.gm) aw.push('Gault Millau '+n.gm+' '+t('Punkte')); if(n.gf) aw.push(t('Goldener Fisch'));
+  var h='<div class="dhead"><button type="button" id="dBack">‹ '+t('Zurück')+'</button><div class="t">'+esc(n.n)+'</div></div><div class="dbody">'+
+   '<div class="dcard"><div class="addr">'+esc(n.s||'–')+'<br>'+esc(n.plz+' '+n.o)+'</div>'+(n.dist!==null?'<div class="kv"><span>'+esc(t('Entfernung'))+'</span><b>'+fmtKm(n.dist,n.q<2)+'</b></div>':'')+'<div class="navrow">'+navLinks(n)+'</div></div>'+
+   '<div class="dcard"><div class="kv"><span>'+esc(t('Status'))+'</span><span><span class="badge" style="background:#B8860B">'+esc(t('Nicht-Kunde (Liste)'))+'</span></span></div>'+
+   (n.z?'<div class="kv"><span>'+esc(t('Zusatz'))+'</span><b>'+esc(n.z)+'</b></div>':'')+
+   '<div class="kv"><span>'+esc(t('Auszeichnung'))+'</span><b>'+esc(aw.join(' · ')||'–')+'</b></div>'+
+   (n.kc?'<div class="kv"><span>'+esc(t('Küchenchef'))+'</span><b>'+esc(n.kc)+'</b></div>':'')+
+   (USER&&USER.role==='leitung'?'<div class="kv"><span>'+esc(t('Gebiet'))+'</span><b>'+(esc(n.g)||'–')+'</b></div>':'')+
+   (n.u?'<div class="warnli">'+esc(t('Unsicher, ob schon Kunde'))+': '+esc(n.h||'')+'. '+esc(t('Bitte vor dem Besuch prüfen.'))+'</div>':'')+'</div>'+
+   (n.tel?'<div class="dcard"><h4>'+esc(t('Kontakt'))+'</h4><div class="kv"><span>'+esc(t('Telefon'))+'</span><b>'+esc(n.tel)+'</b></div>'+(telOk?'<div class="navrow"><a href="tel:'+esc(n.tel.replace(/[^\d+]/g,''))+'">'+esc(t('Anrufen'))+'</a></div>':'')+'</div>':'')+
+   '</div>';
+  showDetail(h);
+}
+
 // ---------- Karte ----------
 function ensureMap(){
   if(map) return true;
@@ -212,6 +263,7 @@ function renderMap(){
     m.on('click',function(){ openDetail(c.id); });
     m.addTo(mapLayer); pts.push([c.lat,c.lon]);
   });
+  if(F.mapLi) liFiltered(true).forEach(function(n){ if(!n.lat) return; var m=L.circleMarker([n.lat,n.lon],{radius:7,weight:2,color:'#B8860B',fillColor:'#FFD54F',fillOpacity:.65}); m.on('click',function(){ openLi(n.id); }); m.addTo(mapLayer); });
   if(meMarker){ map.removeLayer(meMarker); meMarker=null; }
   if(pos){ meMarker=L.circleMarker([pos.lat,pos.lon],{radius:10,weight:3,color:'#fff',fillColor:'#0E3A82',fillOpacity:1}).addTo(map); }
   if(!mapFitted){
@@ -273,6 +325,9 @@ function openDetail(id){
    '<div class="kv"><span>'+esc(t('Total'))+' 2025</span><b>'+f(c.full25)+'</b></div>'+
    '<div class="kv"><span>'+esc(t('Total'))+' 2024</span><b>'+f(c.y24)+'</b></div></div>'+
    '<div class="dcard"><h4>'+esc(t('Umsatzverlauf pro Monat'))+'</h4>'+chart(c)+'</div></div>';
+  showDetail(h);
+}
+function showDetail(h){
   var el=$('detail'); el.innerHTML=h; el.classList.remove('hid'); el.scrollTop=0;
   $('dBack').onclick=function(){ closeDetail(true); };
   if(!detailOpen){ detailOpen=true; try{ history.pushState({d:1},''); }catch(e){} }
@@ -282,7 +337,7 @@ function closeDetail(viaBtn){
   if(viaBtn){ try{ if(history.state&&history.state.d) history.back(); }catch(e){} }
 }
 window.addEventListener('popstate',function(){ if(detailOpen){ detailOpen=false; $('detail').classList.add('hid'); } });
-document.addEventListener('click',function(e){ var c=e.target.closest&&e.target.closest('.card[data-id]'); if(c) openDetail(c.getAttribute('data-id')); });
+document.addEventListener('click',function(e){ var c=e.target.closest&&e.target.closest('.card[data-id]'); if(c) openDetail(c.getAttribute('data-id')); var l=e.target.closest&&e.target.closest('.card[data-li]'); if(l) openLi(l.getAttribute('data-li')); });
 
 // ---------- Neuer Kunde ----------
 function nkv(id){ return ($(id).value||'').trim(); }
@@ -371,11 +426,12 @@ function showView(v){
   if(v==='karte'){ setTimeout(renderMap,30); }
   else if(v==='schlaf') renderS();
   else if(v==='kunden') renderK();
+  else if(v==='li') renderLi();
   $('main').scrollTop=0;
 }
 function refreshAll(){
   renderChips(); renderLoc();
-  if(view==='kunden') renderK(); if(view==='schlaf') renderS(); if(view==='karte') renderMap();
+  if(view==='kunden') renderK(); if(view==='schlaf') renderS(); if(view==='li') renderLi(); if(view==='karte') renderMap();
 }
 
 // ---------- Anmeldung ----------
@@ -449,10 +505,15 @@ function start(){
     initNeukunde();
     document.querySelectorAll('#langBox button').forEach(function(b){ b.onclick=function(){ lang=b.getAttribute('data-lang'); lsSet('dashM_lang',lang); applyLang(); }; });
     $('q').oninput=function(){ F.q=this.value; F.shown=60; renderK(); };
+    $('qli').oninput=function(){ F.liQ=this.value; F.liShown=60; renderLi(); };
+    $('btnResetLi').onclick=function(){ F.liQ=''; F.liChip=''; F.liRad=25; F.liShown=60; $('qli').value=''; refreshAll(); $('main').scrollTop=0; };
     $('btnReset').onclick=function(){ F.q=''; F.chip=''; F.sort='dist'; F.radius=25; F.shown=60; F.shownS=60; $('q').value=''; mapFitted=false; refreshAll(); $('main').scrollTop=0; };
     document.addEventListener('click',function(e){
       var ch=e.target.closest&&e.target.closest('[data-chip]'); if(ch){ F.chip=ch.getAttribute('data-chip'); F.shown=60; refreshAll(); }
       var rd=e.target.closest&&e.target.closest('[data-rad]'); if(rd){ F.radius=+rd.getAttribute('data-rad'); F.shownS=60; refreshAll(); }
+      var lch=e.target.closest&&e.target.closest('[data-lichip]'); if(lch){ F.liChip=lch.getAttribute('data-lichip'); F.liShown=60; refreshAll(); }
+      var lrd=e.target.closest&&e.target.closest('[data-lirad]'); if(lrd){ F.liRad=+lrd.getAttribute('data-lirad'); F.liShown=60; refreshAll(); }
+      var lmp=e.target.closest&&e.target.closest('[data-limap]'); if(lmp){ F.mapLi=!F.mapLi; refreshAll(); }
       var so=e.target.closest&&e.target.closest('[data-sort]'); if(so){ F.sort=so.getAttribute('data-sort'); F.shown=60; renderK(); }
       var tb=e.target.closest&&e.target.closest('#tabbar button'); if(tb) showView(tb.getAttribute('data-v'));
     });
@@ -473,7 +534,7 @@ function idbGet(k){ return idb().then(function(db){ return new Promise(function(
 function idbPut(k,v){ return idb().then(function(db){ return new Promise(function(res,rej){ var tr=db.transaction('kv','readwrite'); tr.objectStore('kv').put(v,k); tr.oncomplete=function(){res();}; tr.onerror=function(){rej(tr.error);}; }); }); }
 function applyData(o){
   if(!o||!o.data||!o.data.kunden||!o.users||!o.users.length) return false;
-  window.DATA=o.data; window.GEO_KUNDEN=o.geo||{}; window.USERS=o.users; return true;
+  window.DATA=o.data; window.GEO_KUNDEN=o.geo||{}; window.USERS=o.users; window.NICHTKUNDEN=o.nk||[]; return true;
 }
 function showSetup(msg){
   $('boot').classList.add('hid'); $('setup').classList.remove('hid');

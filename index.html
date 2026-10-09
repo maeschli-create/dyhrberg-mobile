@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Dyhrberg">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="mobile.css?v=20261008085802">
+<link rel="stylesheet" href="mobile.css?v=20261009140200">
 </head>
 <body>
 <div id="boot" class="boot">Dashboard Mobile wird geladen …</div>
@@ -91,6 +91,16 @@
    <div class="sortrow"><span id="cntS" class="cnt"></span></div>
    <div id="listS" class="list"></div>
   </section>
+  <!-- Nicht-Kunden aus Listen -->
+  <section id="v-li" class="view hid">
+   <div class="locbar" id="locBar3"></div>
+   <div class="note" id="liNote"></div>
+   <div class="search"><input id="qli" type="search" placeholder="Name, Ort, PLZ" autocomplete="off"><button type="button" id="btnResetLi" class="rst" data-i="Zurücksetzen">Zurücksetzen</button></div>
+   <div class="chips" id="chipsLi"></div>
+   <div class="chips" id="chipsLiR"></div>
+   <div class="sortrow"><span id="cntLi" class="cnt"></span></div>
+   <div id="listLi" class="list"></div>
+  </section>
   <!-- Neuer Kunde -->
   <section id="v-neu" class="view hid">
    <div class="note" id="nkNote"></div>
@@ -128,6 +138,7 @@
   <button type="button" data-v="kunden" class="on"><span class="ic">☰</span><span data-i="Kunden">Kunden</span></button>
   <button type="button" data-v="karte"><span class="ic">⌖</span><span data-i="Karte">Karte</span></button>
   <button type="button" data-v="schlaf"><span class="ic">☾</span><span data-i="Schlafend">Schlafend</span></button>
+  <button type="button" data-v="li"><span class="ic">★</span><span data-i="Listen">Listen</span></button>
   <button type="button" data-v="neu"><span class="ic">＋</span><span data-i="Neuer Kunde">Neuer Kunde</span></button>
  </nav>
 </div>
@@ -140,8 +151,9 @@
 
 <script src="plz-ort.js"></script>
 
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="mobile.js?v=20261008085802"></script>
+<script src="mobile.js?v=20261009140200"></script>
 <script>if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }</script>
 </body>
 </html>

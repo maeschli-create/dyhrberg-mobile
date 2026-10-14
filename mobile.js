@@ -1,12 +1,12 @@
 /* Dashboard Mobile – Dyhrberg AG
    Schlanke Handy-Version: Kundenliste mit Entfernung, Karte, schlafende Kunden, Neukunden-Meldung.
-   Liest data/data.js, data/geo-plz.js, data/geo-kunden.js (Adresskoordinaten), data/users.js, data/plz-ort.js. Nur lesen, es wird nichts gespeichert ausser Anmeldung/Sprache im Browser. */
+   Die Kundendaten liegen verschlüsselt (PIN = Schlüssel) in einem Paket und werden erst nach der Anmeldung im Arbeitsspeicher entschlüsselt. Nur lesen, auf dem Gerät bleibt nur das verschlüsselte Paket, Sprache und PLZ. */
 (function(){
 'use strict';
 
 // ---------- Texte (Deutsch = Schlüssel) ----------
 var FR={
-'Name':'Nom','Anmelden':'Se connecter','Neu laden':'Recharger','Abmelden':'Se déconnecter','Gebiet':'Secteur','Alle Gebiete':'Tous les secteurs',
+'Name':'Nom','Anmelden':'Se connecter','Neu laden':'Recharger','Abmelden':'Se déconnecter','Daten vom Gerät löschen':'Supprimer les données de l’appareil','Die Daten werden von diesem Gerät gelöscht. Danach muss die Datei neu gewählt werden. Fortfahren?':'Les données seront supprimées de cet appareil. Il faudra ensuite choisir à nouveau le fichier. Continuer ?','Gebiet':'Secteur','Alle Gebiete':'Tous les secteurs',
 'Sortierung':'Tri','Nähe':'Proximité','Umsatz':'Chiffre d’affaires','Kunden':'Clients','Karte':'Carte','Schlafend':'Dormants','Neuer Kunde':'Nouveau client',
 'Name, Ort, PLZ oder Nr.':'Nom, lieu, NPA ou n°','Alle':'Tous','Mit Umsatz 2026':'Avec CA 2026','Wachstum':'Croissance','stabil':'stable','Rückgang':'Recul','Neukunde':'Nouveau client','verloren':'perdu','ohne Umsatz':'sans CA',
 'Falsche Anmeldung. Bitte Name und PIN prüfen.':'Connexion incorrecte. Vérifiez le nom et le PIN.',
@@ -67,7 +67,7 @@ var GEO=window.GEO_PLZ||{}, GK={}, WEB=false;
 // ---------- Aufbereitung (gleiche Regeln wie das Dashboard am PC) ----------
 function prepare(){
   D=window.DATA||{kunden:[],gebiete:[]}; GK=window.GEO_KUNDEN||{};
-  var adLast={}; (D.gebiete||[]).forEach(function(g){adLast[g.name]=g.last;});
+  var adLast={}, adPart={}; (D.gebiete||[]).forEach(function(g){adLast[g.name]=g.last; adPart[g.name]=g.part||0;});
   C=(D.kunden||[]).map(function(k){
     var cut=adLast[k.ad]||0;
     var c={id:k.id,ad:k.ad,n:k.n||('Kunde '+k.id),s:k.s||'',plz:k.plz||'',o:k.o||'',m25:k.m25||[],m26:k.m26||[],y24:k.y24||0,sp:k.sp,ia:k.ia,tel:k.tel||'',mail:k.mail||'',t2:k.t2||'',kp:k.kp||'',cut:cut};
@@ -80,13 +80,15 @@ function prepare(){
     else if(c.ytd26<=0 && c.full25>0) st='v';
     else if(c.ytd26<=0) st='o';
     else { var ratio=c.ytd25>0?c.ytd26/c.ytd25:2; st=ratio>=1.1?'g':ratio<=0.9?'r':'s'; }
+    var gp=adPart[k.ad]||0, part26=gp?(c.m26[gp-1]||0):0; c.part26=part26;
+    if(gp && c.ytd26<=0 && part26>0) st=(older<=0?'n':'s');
     c.st=st;
     c.sleep=(st!=='v'&&st!=='o'&&st!=='n'&&cut>=4&&c.ytd26>0&&sum(c.m26,cut-3,cut)<=0);
     // letzte Bestellung
     c.last=null; var i;
-    for(i=Math.min(cut,12)-1;i>=0;i--){ if(c.m26[i]>0){ c.last={y:2026,m:i}; break; } }
+    for(i=Math.min(cut+(gp?1:0),12)-1;i>=0;i--){ if(c.m26[i]>0){ c.last={y:2026,m:i}; break; } }
     if(!c.last){ for(i=11;i>=0;i--){ if(c.m25[i]>0){ c.last={y:2025,m:i}; break; } } }
-    c.since=c.last?((2026-c.last.y)*12+(cut-1-c.last.m)):null;
+    c.since=c.last?((2026-c.last.y)*12+(cut+(gp?1:0)-1-c.last.m)):null;
     // Koordinaten: Adresse (swisstopo) sonst PLZ-Mitte
     var g=GK[c.id], p=GEO[c.plz];
     if(g){ c.lat=g[0]; c.lon=g[1]; c.q=g[2]; }
@@ -434,58 +436,75 @@ function refreshAll(){
   if(view==='kunden') renderK(); if(view==='schlaf') renderS(); if(view==='li') renderLi(); if(view==='karte') renderMap();
 }
 
-// ---------- Anmeldung ----------
-var HH=[],KK=[];(function(){var pc=0,isP=function(n){for(var i=2;i*i<=n;i++)if(n%i===0)return false;return true;};for(var c=2;pc<64;c++)if(isP(c)){if(pc<8)HH[pc]=(Math.pow(c,.5)%1)*4294967296|0;KK[pc]=(Math.pow(c,1/3)%1)*4294967296|0;pc++;}})();
-function sha256(s){
-  var u=unescape(encodeURIComponent(s)),l=u.length,w=[],i,j,n=(((l+8)>>6)+1)*16;
-  for(i=0;i<n;i++)w[i]=0;
-  for(i=0;i<l;i++)w[i>>2]|=u.charCodeAt(i)<<(24-(i%4)*8);
-  w[l>>2]|=0x80<<(24-(l%4)*8); w[n-1]=l*8;
-  var h=HH.slice(0);
-  for(j=0;j<n;j+=16){
-    var a=h.slice(0),x=w.slice(j,j+16);
-    for(i=0;i<64;i++){
-      if(i>=16){var g=x[i-15],t2=x[i-2];x[i]=(x[i-16]+(((g>>>7)|(g<<25))^((g>>>18)|(g<<14))^(g>>>3))+x[i-7]+(((t2>>>17)|(t2<<15))^((t2>>>19)|(t2<<13))^(t2>>>10)))|0;}
-      var e=a[4],T1=(a[7]+(((e>>>6)|(e<<26))^((e>>>11)|(e<<21))^((e>>>25)|(e<<7)))+((e&a[5])^(~e&a[6]))+KK[i]+x[i])|0;
-      var A=a[0],T2=((((A>>>2)|(A<<30))^((A>>>13)|(A<<19))^((A>>>22)|(A<<10)))+((A&a[1])^(A&a[2])^(a[1]&a[2])))|0;
-      a=[(T1+T2)|0,a[0],a[1],a[2],(a[3]+T1)|0,a[4],a[5],a[6]];
-    }
-    for(i=0;i<8;i++)h[i]=(h[i]+a[i])|0;
-  }
-  return h.map(function(v){return ('00000000'+(v>>>0).toString(16)).slice(-8);}).join('');
-}
-// PIN-Sperre: nach 3 Fehlversuchen 15 Minuten warten (pro Gerät/Browser gespeichert)
+// ---------- Anmeldung und Entschlüsselung ----------
+// Die Kundendaten liegen verschlüsselt im Paket PKG (PBKDF2-SHA256 -> AES-256-CBC + HMAC-SHA256). Der PIN ist der Schlüssel:
+// ohne PIN ist der Inhalt nicht lesbar. Entschlüsselt wird nur im Arbeitsspeicher; auf dem Gerät liegt immer nur das verschlüsselte Paket.
+var PKG=null;
 var PIN_MAX=3, PIN_LOCK_MIN=15, pinTimer=null;
 function pinState(){ var s=null; try{ s=JSON.parse(lsGet('dashM_pinfail')||'null'); }catch(e){} return s&&typeof s==='object'?s:{n:0,until:0}; }
 function pinSave(s){ lsSet('dashM_pinfail',JSON.stringify(s)); }
 function pinLeft(){ var s=pinState(), l=Math.ceil((s.until-Date.now())/1000); if(s.until&&l<=0){ pinSave({n:0,until:0}); return 0; } return l>0?l:0; }
 function pinFail(){ var s=pinState(); s.n=(s.n||0)+1; if(s.n>=PIN_MAX){ s.until=Date.now()+PIN_LOCK_MIN*60000; s.n=0; } pinSave(s); }
+function isFrName(n){ return n==='Sylvain Dalfollo'; }
 function pinShowLock(){
   var el=$('lgMsg'); clearInterval(pinTimer);
   var tick=function(){ var l=pinLeft(); if(l<=0){ clearInterval(pinTimer); el.textContent=''; return; }
-    var fr=$('lgName').value==='Sylvain Dalfollo', m=Math.floor(l/60), s=('0'+(l%60)).slice(-2);
+    var fr=isFrName($('lgName').value), m=Math.floor(l/60), s=('0'+(l%60)).slice(-2);
     el.textContent=fr?'Trop de tentatives. Veuillez patienter '+m+':'+s+' minutes.':'Zu viele Fehlversuche. Bitte noch '+m+':'+s+' Minuten warten.'; };
   tick(); pinTimer=setInterval(tick,1000);
 }
+function b64(s){ var b=atob(s), a=new Uint8Array(b.length), i; for(i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
+function cryptoOk(){ return !!(window.crypto&&window.crypto.subtle&&window.TextEncoder); }
+// liefert Promise<{data,geo,nk}>; wirft bei falschem PIN
+function decryptPkg(P,pin){
+  var S=window.crypto.subtle, enc=new TextEncoder(), iv=b64(P.iv), ct=b64(P.ct), msg=new Uint8Array(iv.length+ct.length), keys;
+  msg.set(iv,0); msg.set(ct,iv.length);
+  return S.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveBits'])
+    .then(function(km){ return S.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:b64(P.kdf.salt),iterations:P.kdf.iter},km,512); })
+    .then(function(bits){ keys=new Uint8Array(bits); return S.importKey('raw',keys.slice(32),{name:'HMAC',hash:'SHA-256'},false,['verify']); })
+    .then(function(hk){ return S.verify('HMAC',hk,b64(P.mac),msg); })
+    .then(function(ok){ if(!ok) throw new Error('pin'); return S.importKey('raw',keys.slice(0,32),'AES-CBC',false,['decrypt']); })
+    .then(function(ak){ return S.decrypt({name:'AES-CBC',iv:iv},ak,ct); })
+    .then(function(pt){ return JSON.parse(new TextDecoder().decode(pt)); });
+}
+function pkgValid(o){ return !!(o&&o.v===2&&o.user&&o.user.name&&o.kdf&&o.kdf.salt&&o.kdf.iter&&o.iv&&o.ct&&o.mac); }
 function auth(cb){
-  var users=window.USERS||[];
-  if(!users.length){ showFatal('Keine Benutzer in dieser Datei. Bitte die Datei neu vom Verkaufsleiter holen.'); return; }
-  var saved=null; try{ saved=JSON.parse(lsGet('dashM_user')||'null'); }catch(e){}
-  if(saved){ var su=users.filter(function(u){return u.name===saved.name&&u.hash===saved.hash;})[0]; if(su){ USER=su; cb(); return; } }
+  lsDel('dashM_user');   // frühere dauerhafte Anmeldung (Name+Hash) entfernen
+  if(!pkgValid(PKG)){ showFatal('Keine gültigen Daten in dieser Datei. Bitte die Datei neu vom Verkaufsleiter holen.'); return; }
+  var u=PKG.user;
   $('boot').classList.add('hid');
-  $('lgName').innerHTML=users.map(function(u){return '<option>'+esc(u.name)+'</option>';}).join('');
+  $('lgName').innerHTML='<option>'+esc(u.name)+'</option>'; $('lgName').disabled=true;
   $('login').classList.remove('hid');
+  if(!cryptoOk()){
+    $('lgMsg').textContent=isFrName(u.name)?'Ce navigateur ne peut pas déchiffrer les données. Utilisez l’application web (https).':'Dieser Browser kann die Daten nicht entschlüsseln (nur über https bzw. mit Chrome/Safari). Bitte die Web-App verwenden: https://maeschli-create.github.io/dyhrberg-mobile/';
+    return;
+  }
   if(pinLeft()>0) pinShowLock();
-  var done=false;
+  var busy=false;
   function go(){
-    if(done) return;
+    if(busy) return;
     if(pinLeft()>0){ pinShowLock(); $('lgPin').value=''; return; }
-    var u=users.filter(function(x){return x.name===$('lgName').value;})[0];
-    if(u&&sha256(u.salt+$('lgPin').value.trim())===u.hash){ pinSave({n:0,until:0}); done=true; USER=u; lsSet('dashM_user',JSON.stringify({name:u.name,hash:u.hash})); $('login').classList.add('hid'); $('lgPin').value=''; cb(); }
-    else { pinFail(); $('lgPin').value=''; if(pinLeft()>0) pinShowLock(); else { $('lgMsg').textContent=($('lgName').value==='Sylvain Dalfollo'?FR['Falsche Anmeldung. Bitte Name und PIN prüfen.']:'Falsche Anmeldung. Bitte Name und PIN prüfen.'); $('lgPin').focus(); } }
+    var pin=$('lgPin').value.trim(); if(!pin) return;
+    busy=true; $('lgGo').disabled=true; $('lgMsg').textContent=isFrName(u.name)?'Vérification …':'Wird geprüft …';
+    decryptPkg(PKG,pin).then(function(o){
+      pinSave({n:0,until:0}); $('lgPin').value=''; $('lgMsg').textContent='';
+      window.DATA=o.data; window.GEO_KUNDEN=o.geo||{}; window.NICHTKUNDEN=o.nk||[]; window.USERS=[u]; USER=u;
+      $('login').classList.add('hid'); busy=false; $('lgGo').disabled=false; lockWatch(); cb();
+    },function(){
+      busy=false; $('lgGo').disabled=false; pinFail(); $('lgPin').value='';
+      if(pinLeft()>0) pinShowLock(); else { $('lgMsg').textContent=isFrName(u.name)?'Connexion incorrecte. Vérifiez le PIN.':'Falscher PIN.'; $('lgPin').focus(); }
+    });
   }
   $('lgGo').onclick=go;
   $('lgPin').onkeydown=function(ev){ if(ev.key==='Enter'||ev.keyCode===13) go(); };
+}
+// Automatische Sperre: war die App länger als 10 Minuten im Hintergrund, wird sie neu geladen (Daten verschwinden aus dem Speicher, PIN nötig)
+var LOCK_MIN=10, hiddenAt=0;
+function lockWatch(){
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){ hiddenAt=Date.now(); }
+    else if(hiddenAt&&Date.now()-hiddenAt>LOCK_MIN*60000){ location.reload(); }
+  });
 }
 
 // ---------- Start ----------
@@ -521,25 +540,28 @@ function start(){
     document.addEventListener('click',function(){ $('menu').classList.add('hid'); });
     $('mReload').onclick=function(){ location.reload(); };
     if(WEB){ $('mData').classList.remove('hid'); $('mData').onclick=function(){ $('fileIn').click(); }; }
-    $('mLogout').onclick=function(){ lsDel('dashM_user'); location.reload(); };
+    $('mLogout').onclick=function(){ location.reload(); };   // Daten verschwinden aus dem Speicher, beim Neustart ist der PIN nötig
+    if(WEB){ $('mWipe').classList.remove('hid'); $('mWipe').onclick=function(){ if(confirm(t('Die Daten werden von diesem Gerät gelöscht. Danach muss die Datei neu gewählt werden. Fortfahren?'))) wipeDevice(); }; }
+    $('nkForm').addEventListener('submit',function(e){ e.preventDefault(); });
     var pz=lsGet('dashM_plz'); if(pz){ var r=resolvePlz(pz); if(r){ pos={lat:r.lat,lon:r.lon,label:t('Standort')+': '+r.label,src:'plz'}; recalcDist(); } }
     applyLang(); showView('kunden');
     // Wenn der Browser den Standort schon erlaubt hat, gleich bestimmen
     try{ if(navigator.permissions&&navigator.permissions.query) navigator.permissions.query({name:'geolocation'}).then(function(p){ if(p.state==='granted') getGeo(); },function(){}); }catch(e){}
   }catch(e){ showFatal('Fehler beim Start: '+(e&&e.message)+'\n'+(e&&e.stack||'')+'\nBrowser: '+navigator.userAgent); }
 }
-// ---------- Web-Modus (installierbare Seite ohne Kundendaten): Daten kommen aus einer Datei (OneDrive) und bleiben nur im Gerät ----------
+// ---------- Web-Modus (installierbare Seite ohne Kundendaten): das verschlüsselte Paket kommt aus einer Datei (OneDrive) und bleibt nur im Gerät ----------
 function idb(){ return new Promise(function(res,rej){ var r=indexedDB.open('dashMobile',1); r.onupgradeneeded=function(){r.result.createObjectStore('kv');}; r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }); }
 function idbGet(k){ return idb().then(function(db){ return new Promise(function(res){ var q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=function(){res(q.result);}; q.onerror=function(){res(null);}; }); }).catch(function(){return null;}); }
 function idbPut(k,v){ return idb().then(function(db){ return new Promise(function(res,rej){ var tr=db.transaction('kv','readwrite'); tr.objectStore('kv').put(v,k); tr.oncomplete=function(){res();}; tr.onerror=function(){rej(tr.error);}; }); }); }
-function applyData(o){
-  if(!o||!o.data||!o.data.kunden||!o.users||!o.users.length) return false;
-  window.DATA=o.data; window.GEO_KUNDEN=o.geo||{}; window.USERS=o.users; window.NICHTKUNDEN=o.nk||[]; return true;
-}
+function idbDel(k){ return idb().then(function(db){ return new Promise(function(res){ var tr=db.transaction('kv','readwrite'); tr.objectStore('kv').delete(k); tr.oncomplete=function(){res();}; tr.onerror=function(){res();}; }); }).catch(function(){}); }
 function showSetup(msg){
   $('boot').classList.add('hid'); $('setup').classList.remove('hid');
   document.querySelectorAll('#setup [data-i]').forEach(function(el){ el.textContent=t(el.getAttribute('data-i')); });
   $('setupMsg').textContent=msg||'';
+}
+function wipeDevice(){
+  ['dashM_user','dashM_pinfail','dashM_plz','dashM_lang'].forEach(lsDel);
+  return idbDel('mobdata').then(function(){ location.reload(); });
 }
 function webBoot(){
   WEB=true;
@@ -548,15 +570,21 @@ function webBoot(){
     var rd=new FileReader();
     rd.onload=function(){
       var o=null; try{ o=JSON.parse(rd.result); }catch(e){}
-      if(!applyData(o)){ showSetup(t('Diese Datei ist keine gültige Datei für Dashboard Mobile. Bitte «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen.')); return; }
-      idbPut('mobdata',o).then(function(){ if($('app').classList.contains('hid')){ $('setup').classList.add('hid'); auth(start); } else location.reload(); },
+      if(!pkgValid(o)){ showSetup(t('Diese Datei ist keine gültige Datei für Dashboard Mobile. Bitte «Daten Dashboard Mobile.json» aus dem eigenen Ordner wählen.')); return; }
+      idbPut('mobdata',o).then(function(){ location.reload(); },
         function(){ showSetup(t('Daten konnten im Gerät nicht gespeichert werden (privater Modus?).')); });
     };
     rd.onerror=function(){ showSetup(t('Datei konnte nicht gelesen werden.')); };
     rd.readAsText(fl); this.value='';
   };
   $('setupBtn').onclick=function(){ $('fileIn').click(); };
-  idbGet('mobdata').then(function(o){ if(applyData(o)) auth(start); else showSetup(''); });
+  idbGet('mobdata').then(function(o){
+    if(pkgValid(o)){ PKG=o; auth(start); }
+    else {
+      if(o){ idbDel('mobdata'); }   // alte, unverschlüsselte Datenfassung vom Gerät entfernen
+      showSetup(o?'Die gespeicherten Daten waren veraltet und wurden entfernt. Bitte die neue Datei «Daten Dashboard Mobile.json» wählen.':'');
+    }
+  });
 }
-if(window.DATA&&window.USERS) auth(start); else webBoot();
+if(window.ENC){ PKG=window.ENC; auth(start); } else webBoot();
 })();

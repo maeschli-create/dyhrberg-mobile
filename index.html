@@ -6,14 +6,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0E3A82">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://wmts.geo.admin.ch https://cdnjs.cloudflare.com; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
 <title>Dashboard Mobile</title>
 <link rel="icon" href="logos/dyhrberg-de.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-title" content="Dyhrberg">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="mobile.css?v=20261009140200">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha256-tXCrvaljxgtN5LT/Syb5Mm9T+yzPFGH98JVcoJT7JTk=" crossorigin="anonymous">
+<link rel="stylesheet" href="mobile.css?v=20261014080414">
 </head>
 <body>
 <div id="boot" class="boot">Dashboard Mobile wird geladen …</div>
@@ -39,7 +41,7 @@
   <label for="lgName" data-i="Name">Name</label>
   <select id="lgName"></select>
   <label for="lgPin">PIN</label>
-  <input id="lgPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">
+  <input id="lgPin" type="password" autocomplete="off" placeholder="PIN">
   <button type="button" id="lgGo" class="pri big" data-i="Anmelden">Anmelden</button>
   <div id="lgMsg" class="err"></div>
  </div>
@@ -62,6 +64,7 @@
   <button type="button" id="mData" class="hid" data-i="Daten aktualisieren (Datei wählen)">Daten aktualisieren (Datei wählen)</button>
   <button type="button" id="mReload" data-i="Neu laden">Neu laden</button>
   <button type="button" id="mLogout" data-i="Abmelden">Abmelden</button>
+  <button type="button" id="mWipe" class="hid" data-i="Daten vom Gerät löschen">Daten vom Gerät löschen</button>
  </div>
  <div id="adBar" class="adbar hid"><label for="adSel" data-i="Gebiet">Gebiet</label><select id="adSel"></select></div>
 
@@ -105,7 +108,7 @@
   <section id="v-neu" class="view hid">
    <div class="note" id="nkNote"></div>
    <div id="nkDup" class="note warn hid"></div>
-   <form id="nkForm" autocomplete="off" onsubmit="return false" class="nk">
+   <form id="nkForm" autocomplete="off" class="nk">
     <label for="nkName" data-i="Name des Betriebes *">Name des Betriebes *</label><input id="nkName">
     <label for="nkRf" data-i="Rechtsform">Rechtsform</label>
     <select id="nkRf"><option value="" data-i="– bitte wählen –">– bitte wählen –</option><option>AG</option><option>SA</option><option>SARL</option><option>GmbH</option><option>Holding</option><option>Einzelfirma</option></select>
@@ -152,8 +155,8 @@
 <script src="plz-ort.js"></script>
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="mobile.js?v=20261009140200"></script>
-<script>if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha256-XJrs/DDkVkUZ29zdzFOkGCJ9zHVo5hnpdi3c7HYJ7Uc=" crossorigin="anonymous"></script>
+<script src="mobile.js?v=20261014080414"></script>
+<script src="sw-reg.js?v=20261014080414"></script>
 </body>
 </html>
